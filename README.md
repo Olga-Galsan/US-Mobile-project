@@ -1,1 +1,1 @@
-# US-Mobile-project
+# DevOps Take-Home Assignment – EKS + GitOps
