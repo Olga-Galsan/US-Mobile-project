@@ -2,8 +2,8 @@ replicaCount: 2
 
 image:
   repository: nginx
-  tag: "doesnotexist123"
-  pullPolicy: IfNotPresent
+  tag: "totallyfakebroken123"
+  pullPolicy: Always
 
 service:
   type: ClusterIP
