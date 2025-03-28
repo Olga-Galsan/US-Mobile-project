@@ -19,7 +19,7 @@ This project demonstrates a GitOps-based deployment pipeline on AWS EKS using Te
 ---
 
 ## 📁 Project Structure
-
+```
 US-Mobile-project/
 ├── infra/                  # Terraform code for VPC, EKS, IAM, etc.
 │   ├── main.tf
@@ -42,6 +42,7 @@ US-Mobile-project/
 │
 ├── .gitignore
 └── README.md
+```
 
 ---
 
