@@ -3,7 +3,7 @@
 
 ## Overview
 
-This project demonstrates a GitOps-based deployment pipeline on AWS EKS using Terraform, ArgoCD, Helm, and Kubernetes. It provisions cloud infrastructure, sets up GitOps automation, and deploys a sample microservice to an EKS cluster.
+This project demonstrates a GitOps-based deployment pipeline on AWS EKS using Terraform, ArgoCD, Helm and Kubernetes. It provisions cloud infrastructure, sets up GitOps automation and deploys a sample microservice to an EKS cluster.
 
 ---
 
@@ -20,38 +20,96 @@ This project demonstrates a GitOps-based deployment pipeline on AWS EKS using Te
 
 ## 📁 Project Structure
 
+US-Mobile-project/
+├── infra/                  # Terraform code for VPC, EKS, IAM, etc.
+│   ├── main.tf
+│   ├── variables.tf
+│   ├── outputs.tf
+│   └── ...
+│
+├── gitops-repo/            # GitOps repo ArgoCD points to
+│   ├── applications/       # ArgoCD Application manifests
+│   │   ├── sample-app.yaml
+│   │   └── nginx-app.yaml
+│   └── nginx-app/          # Helm chart for the nginx-app
+│       ├── Chart.yaml
+│       ├── values.yaml
+│       ├── templates/
+│       │   ├── deployment.yaml
+│       │   ├── service.yaml
+│       │   ├── serviceaccount.yaml
+│       │   └── ...
+│
+├── .gitignore
+└── README.md
 
 ---
 
-## 🚀 How It Works
+## 🚀 Pipeline Overview
 
-### 1. Infrastructure Provisioning (Terraform)
-- Provisions VPC, subnets, IAM roles, and an EKS cluster using public Terraform modules.
-- After `terraform apply`, outputs EKS endpoint and cluster name.
+### 1. **Infrastructure Provisioning (Terraform)**
 
-### 2. GitOps Setup (ArgoCD)
-- ArgoCD is installed via Helm and configured to sync with this GitHub repo.
-- ArgoCD watches the `applications/` folder for Kubernetes app definitions.
+- Provisions:
+  - VPC, Subnets
+  - IAM roles and policies
+  - EKS Cluster and worker nodes
+- Outputs EKS cluster info for `kubectl` access.
 
-### 3. Application Deployment (Helm)
-- Sample `nginx-app` is packaged as a Helm chart.
+### 2. **GitOps Setup (ArgoCD)**
+
+- ArgoCD installed via Helm.
+- Monitors the GitHub repo (`gitops-repo/applications/`) for changes.
+- Automatically syncs application state into the EKS cluster.
+
+### 3. **Application Deployment (Helm + ArgoCD)**
+
+- `nginx-app` is packaged as a Helm chart.
 - Chart includes:
-  - `Deployment`, `Service`, `ServiceAccount`
-  - Optional: `HPA`, `Ingress`
-- ArgoCD syncs the Helm chart to the EKS cluster.
-
-### 4. Rollbacks
-- ArgoCD provides automatic rollback on sync failure.
+  - Kubernetes `Deployment`, `Service`, `ServiceAccount`
+  - Readiness and Liveness Probes for health checks
+- ArgoCD syncs and deploys the chart to EKS on every Git push.
 
 ---
 
-## 🧪 Testing Rollback
+## 🔁 Rollback Logic
 
-To simulate a failure:
-- Manually break something in the Helm chart (e.g., set `image.tag: invalid`)
-- Commit the change
-- ArgoCD will detect the failure and show it in the UI
-- Fix the error and commit again to recover
+- The `nginx-app` Helm chart includes probes (`readinessProbe`, `livenessProbe`) to monitor application health.
+- To simulate failure, the container image tag was set to a fake value (`nginx:itdoesnotexist123`).
+- This caused Kubernetes to enter `ImagePullBackOff` and ArgoCD marked the app as **Processing**.
+- Once the correct image tag was restored ArgoCD automatically resynced and restored the working app.
+
+---
+
+## 🧪 Testing Failure (Rollback Scenario)
+
+To test:
+
+1. In `values.yaml`, set:
+   ```yaml
+   image:
+     repository: nginx
+     tag: itdoesnotexist123
+     pullPolicy: Always
+
+2. Commit and push the change.
+3. ArgoCD will:
+
+Attempt to sync
+
+Detect failed rollout
+
+Mark app as Processing
+
+4. Fix the tag → commit → sync returns app to healthy state.
+
+✅ This confirms GitOps-based reactive deployment and health monitoring are functioning.
+
+## 📸 Screenshot: Failed Deployment
+
+Below is a screenshot showing the failed deployment status (`ImagePullBackOff`) caused by a broken image tag:
+
+![Image Pull BackOff](assets/backoff.png)
+
 
 ---
 
